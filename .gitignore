@@ -1,7 +1,7 @@
 # @UE3-BEGIN
-/output/*
-!output/package.ps1
-!output/build.ps1
+/_build/*
+!_build/package.ps1
+!_build/build.ps1
 # @UE3-END
 
 # /
