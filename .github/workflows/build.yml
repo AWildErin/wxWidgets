@@ -11,32 +11,98 @@ on:
 env:
   UE3_BUILD_DIR: ${{ github.workspace }}/_build
   UE3_OUTPUT_DIR: ${{ github.workspace }}/_build/out
+  UE3_SRC_DIR: ${{ github.workspace }}/src
+  UE3_THIRDPARTY_DIR: ${{ github.workspace }}/3rdparty
 
 jobs:
-  # TODO: use a matrix instead, allows us to concurrently build
-  # both release and debug at the same time, but I'm not sure how we could share
-  # the output between both jobs for the package step
-  build:
+  # Generates the cmake projects
+  # Caches cmake prebuild output and submodules
+  cache:
     runs-on: windows-latest
     steps:
-      - name: Checkout Repository
+      - name: Checkout repository
         uses: actions/checkout@v3
-        with:
-          submodules: recursive
 
-      - name: Get cache
-        id: cache-cmake
+      - name: Cache submodules
+        id: cache-git
         uses: actions/cache@v3.3.3
         with:
           path: |
-            ${{ env.UE3_BUILD_DIR }}/x64
-          key: ${{ runner.os }}-${{ hashFiles('${{ env.UE3_BUILD_DIR }}/build.ps1', '**/CMakeLists.txt', '**/*.cmake', 'build/cmake/**' ) }}
+            ${{ env.UE3_THIRDPARTY_DIR }}/catch
+            ${{ env.UE3_SRC_DIR }}/zlib
+            ${{ env.UE3_SRC_DIR }}/png
+            ${{ env.UE3_SRC_DIR }}/expat
+            ${{ env.UE3_SRC_DIR }}/tiff
+            ${{ env.UE3_SRC_DIR }}/jpeg
+
+          key: ${{ runner.os }}-submodules
+
+      - name: Update git submodules
+        if: steps.cache-git.outputs.cache-hit != 'true'
+        run:
+          git submodule update --init --recursive
+
+      - name: Cache cmake
+        id: cache-cmake
+        uses: actions/cache@v3.3.3
+        with:
+          # it doesn't seem happy with me using the build dir here for some reason
+          path: |
+            _build/x64
+            _build/x86
+          key: ${{ runner.os }}-cmake-${{ hashFiles('${{ env.UE3_BUILD_DIR }}/build.ps1', '**/CMakeLists.txt', 'build/cmake/**' ) }}
 
       - name: Setup CMake projects
         if: steps.cache-cmake.outputs.cache-hit != 'true'
         shell: pwsh
         working-directory: ${{ env.UE3_BUILD_DIR }}
-        run: ./build.ps1 -CI -BuildWin32:$false # Win32 builds are disabled for now
+        run: ./build.ps1 -CI
+
+
+  # TODO: use a matrix instead, allows us to concurrently build
+  # both release and debug at the same time, but I'm not sure how we could share
+  # the output between both jobs for the package step
+  build:
+    needs: cache
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Get submodules cache
+        id: cache-git
+        uses: actions/cache/restore@v3.3.3
+        with:
+          path: |
+            ${{ env.UE3_THIRDPARTY_DIR }}/catch
+            ${{ env.UE3_SRC_DIR }}/zlib
+            ${{ env.UE3_SRC_DIR }}/png
+            ${{ env.UE3_SRC_DIR }}/expat
+            ${{ env.UE3_SRC_DIR }}/tiff
+            ${{ env.UE3_SRC_DIR }}/jpeg
+
+          key: ${{ runner.os }}-submodules
+
+      #- name: Update git submodules
+      #  run:
+      #    git submodule update --init --recursive
+
+      - name: Get cmake cache
+        id: cache-cmake
+        uses: actions/cache/restore@v3.3.3
+        with:
+          path: |
+            _build/x64
+            _build/x86
+
+          key: ${{ runner.os }}-cmake-${{ hashFiles('${{ env.UE3_BUILD_DIR }}/build.ps1', '**/CMakeLists.txt', 'build/cmake/**' ) }}
+          fail-on-cache-miss: true
+
+      #- name: Setup CMake projects
+      #  if: steps.cache-cmake.outputs.cache-hit != 'true'
+      #  shell: pwsh
+      #  working-directory: ${{ env.UE3_BUILD_DIR }}
+      #  run: ./build.ps1 -CI -BuildWin32:$false # Win32 builds are disabled for now
 
       - name: Build Win64 - Debug
         working-directory: ${{ env.UE3_BUILD_DIR }}/x64
