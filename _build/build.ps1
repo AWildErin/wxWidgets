@@ -1,6 +1,14 @@
 # build.ps1
 # Scaffolds and compiles wxWidgets to our requirements
 
+param
+(
+    [switch]$ConfigureOnly = $false,
+    [switch]$CI = $false,
+    [switch]$BuildWin32 = $true,
+    [switch]$BuildWin64 = $true
+)
+
 # Set to continue to enable debug output
 #$DebugPreference = "SilentlyContinue"
 $DebugPreference = "Continue"
@@ -18,6 +26,13 @@ $CMakeOptions = @(
 )
 $JoinedOptions = $CMakeOptions -join ' -D'
 
+
+# If we have CI enabled, configure only is implied
+if ($CI)
+{
+    $ConfigureOnly = $true
+}
+
 Write-Debug "Compiling with the following options:"
 foreach ($Option in $CMakeOptions)
 {
@@ -32,10 +47,8 @@ $Root = $PSScriptRoot
 $Win64Root = "$Root\x64"
 $Win32Root = "$Root\x86"
 
-
 # Create Win64 and Win32 builds
 Write-Output "Generating Projects"
-
 
 # If you add/remove options, be sure to comment this out so the last compile gets removed
 # else the new options may not propagate for the compile due to CMakeCache
@@ -43,26 +56,45 @@ Write-Output "Generating Projects"
 #Remove-Item -path $Win32Root -Recurse -Force
 
 # We surpress the deprecated warning, yes we know, but we don't care right now!
-Write-Output "Generating Win64"
-Invoke-Expression "cmake .. -B x64 -Wno-deprecated -G '$CMakeGenerator' -A x64 -D$JoinedOptions"
-Write-Output "Generating Win32"
-Invoke-Expression "cmake .. -B x86 -Wno-deprecated -G '$CMakeGenerator' -A Win32 -D$JoinedOptions"
+if ($BuildWin64)
+{
+    Write-Output "Generating Win64"
+    Invoke-Expression "cmake .. -B x64 -Wno-deprecated -G '$CMakeGenerator' -A x64 -D$JoinedOptions"
+}
+
+if ($BuildWin32)
+{
+    Write-Output "Generating Win32"
+    Invoke-Expression "cmake .. -B x86 -Wno-deprecated -G '$CMakeGenerator' -A Win32 -D$JoinedOptions"
+}
+
+if ($ConfigureOnly)
+{
+    Write-Output "-ConfigureOnly or -CI detected, exiting the script."
+    exit
+}
 
 # Compile Win64 Debug & Release
-Set-Location $Win64Root
-Write-Output "Compiling Win64 Debug"
-cmake --build . --config Debug
-Write-Output "Compiling Win64 Release"
-cmake --build . --config Release
-Write-Output "Win64 build complete!"
+if ($BuildWin64)
+{
+    Set-Location $Win64Root
+    Write-Output "Compiling Win64 Debug"
+    cmake --build . --config Debug
+    Write-Output "Compiling Win64 Release"
+    cmake --build . --config Release
+    Write-Output "Win64 build complete!"
+}
 
 # Compile Win32 Debug & Release
-Set-Location $Win32Root
-Write-Output "Compiling Win32 Debug"
-cmake --build . --config Debug
-Write-Output "Compiling Win32 Release"
-cmake --build . --config Release
-Write-Output "Win32 build complete!"
+if ($BuildWin32)
+{
+    Set-Location $Win32Root
+    Write-Output "Compiling Win32 Debug"
+    cmake --build . --config Debug
+    Write-Output "Compiling Win32 Release"
+    cmake --build . --config Release
+    Write-Output "Win32 build complete!"
+}
 
 # Set back to root
 Set-Location $Root

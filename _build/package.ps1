@@ -1,3 +1,9 @@
+param
+(
+    [switch]$BuildWin32 = $true,
+    [switch]$BuildWin64 = $true
+)
+
 # Set to continue to enable debug output
 $DebugPreference = "SilentlyContinue"
 #$DebugPreference = "Continue"
@@ -107,12 +113,18 @@ if (Test-Path -Path $OutputPath)
 # Package up only the stuff we need to ship to the end user
 Write-Output "Preparing Release"
 SetOutDir -SubDir "Rel"
-CopyGlob -InDir $Win64Lib -OutDir $Win64DllOut -Filter "wx*311u_*"
-CopyGlob -InDir $Win32Lib -OutDir $Win32DllOut -Filter "wx*311u_*"
 
-# Copy wxrc
-CopyGlob -InDir $Win64Lib -OutDir $Win64DllOut -Filter "wxrc*"
-CopyGlob -InDir $Win32Lib -OutDir $Win32DllOut -Filter "wxrc*"
+if ($BuildWin64)
+{
+    CopyGlob -InDir $Win64Lib -OutDir $Win64DllOut -Filter "wx*311u_*"
+    CopyGlob -InDir $Win64Lib -OutDir $Win64DllOut -Filter "wxrc*"
+}
+
+if ($BuildWin32)
+{
+    CopyGlob -InDir $Win32Lib -OutDir $Win32DllOut -Filter "wx*311u_*"
+    CopyGlob -InDir $Win32Lib -OutDir $Win32DllOut -Filter "wxrc*"
+}
 
 # Package up the dev requirements
 Write-Output "Preparing Developer"
@@ -123,18 +135,21 @@ $ExtFolder = "$OutputPath\Development\External\wxWidgets"
 
 # Copy Includes
 CopyDirectory -InDir $InIncDir -OutDir $ExtFolder
-CopyDirectory -InDir "$Win64Lib\mswud" -OutDir "$ExtFolder\lib\vc_dll\win64"
-CopyDirectory -InDir "$Win64Lib\mswu" -OutDir "$ExtFolder\lib\vc_dll\win64"
-CopyDirectory -InDir "$Win32Lib\mswud" -OutDir "$ExtFolder\lib\vc_dll\win32"
-CopyDirectory -InDir "$Win32Lib\mswu" -OutDir "$ExtFolder\lib\vc_dll\win32"
 
-CopyGlob -InDir $Win64Lib -OutDir $Win64DllOut -Filter "wx*311ud*"
-CopyGlob -InDir $Win32Lib -OutDir $Win32DllOut -Filter "wx*311ud*"
+if ($BuildWin64)
+{
+    CopyDirectory -InDir "$Win64Lib\mswud" -OutDir "$ExtFolder\lib\vc_dll\win64"
+    CopyDirectory -InDir "$Win64Lib\mswu" -OutDir "$ExtFolder\lib\vc_dll\win64"
+    CopyGlob -InDir $Win64Lib -OutDir $Win64DllOut -Filter "wx*311ud*"
+    CopyGlob -InDir $Win64Lib -OutDir "$ExtFolder\lib\vc_dll\win64" -Filter "*.lib"
+    CopyGlob -InDir $Win64Lib -OutDir $Win64DllOut -Filter "wxrc*"
+}
 
-CopyGlob -InDir $Win64Lib -OutDir "$ExtFolder\lib\vc_dll\win64" -Filter "*.lib"
-CopyGlob -InDir $Win32Lib -OutDir "$ExtFolder\lib\vc_dll\win32" -Filter "*.lib"
-
-# Copy wxrc
-CopyGlob -InDir $Win64Lib -OutDir $Win64DllOut -Filter "wxrc*"
-CopyGlob -InDir $Win32Lib -OutDir $Win32DllOut -Filter "wxrc*"
-
+if ($BuildWin32)
+{
+    CopyDirectory -InDir "$Win32Lib\mswud" -OutDir "$ExtFolder\lib\vc_dll\win32"
+    CopyDirectory -InDir "$Win32Lib\mswu" -OutDir "$ExtFolder\lib\vc_dll\win32"
+    CopyGlob -InDir $Win32Lib -OutDir $Win32DllOut -Filter "wx*311ud*"
+    CopyGlob -InDir $Win32Lib -OutDir "$ExtFolder\lib\vc_dll\win32" -Filter "*.lib"
+    CopyGlob -InDir $Win32Lib -OutDir $Win32DllOut -Filter "wxrc*"
+}
