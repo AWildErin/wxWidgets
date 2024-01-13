@@ -10,101 +10,42 @@ on:
 
 env:
   UE3_BUILD_DIR: ${{ github.workspace }}/_build
-  UE3_OUTPUT_DIR: ${{ github.workspace }}/_build/out
+  UE3_COMPILE_DIR: ${{ github.workspace }}/_build/ci-build
   UE3_SRC_DIR: ${{ github.workspace }}/src
   UE3_THIRDPARTY_DIR: ${{ github.workspace }}/3rdparty
 
 jobs:
-  # Generates the cmake projects
-  # Caches cmake prebuild output and submodules
-  cache:
-    runs-on: windows-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-
-      - name: Cache submodules
-        id: cache-git
-        uses: actions/cache@v3.3.3
-        with:
-          path: |
-            ${{ env.UE3_THIRDPARTY_DIR }}/catch
-            ${{ env.UE3_SRC_DIR }}/zlib
-            ${{ env.UE3_SRC_DIR }}/png
-            ${{ env.UE3_SRC_DIR }}/expat
-            ${{ env.UE3_SRC_DIR }}/tiff
-            ${{ env.UE3_SRC_DIR }}/jpeg
-
-          key: ${{ runner.os }}-submodules
-
-      - name: Update git submodules
-        if: steps.cache-git.outputs.cache-hit != 'true'
-        run:
-          git submodule update --init --recursive
-
-      - name: Cache cmake
-        id: cache-cmake
-        uses: actions/cache@v3.3.3
-        with:
-          # it doesn't seem happy with me using the build dir here for some reason
-          path: |
-            _build/x64
-            _build/x86
-          key: ${{ runner.os }}-cmake-${{ hashFiles('${{ env.UE3_BUILD_DIR }}/build.ps1', '**/CMakeLists.txt', 'build/cmake/**' ) }}
-
-      - name: Setup CMake projects
-        if: steps.cache-cmake.outputs.cache-hit != 'true'
-        shell: pwsh
-        working-directory: ${{ env.UE3_BUILD_DIR }}
-        run: ./build.ps1 -CI
-
-
-  # TODO: use a matrix instead, allows us to concurrently build
-  # both release and debug at the same time, but I'm not sure how we could share
-  # the output between both jobs for the package step
   build:
-    needs: cache
-    runs-on: windows-latest
+    strategy:
+      matrix:
+        config: [ Debug, Release ]
+        arch: [ x64, win32 ]
+
+    runs-on:  windows-latest
+
+    defaults:
+      run:
+        shell: pwsh
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
-
-      - name: Get submodules cache
-        id: cache-git
-        uses: actions/cache/restore@v3.3.3
         with:
-          path: |
-            ${{ env.UE3_THIRDPARTY_DIR }}/catch
-            ${{ env.UE3_SRC_DIR }}/zlib
-            ${{ env.UE3_SRC_DIR }}/png
-            ${{ env.UE3_SRC_DIR }}/expat
-            ${{ env.UE3_SRC_DIR }}/tiff
-            ${{ env.UE3_SRC_DIR }}/jpeg
+          submodules: recursive
 
-          key: ${{ runner.os }}-submodules
-
-      #- name: Update git submodules
-      #  run:
-      #    git submodule update --init --recursive
-
-      - name: Get cmake cache
-        id: cache-cmake
-        uses: actions/cache/restore@v3.3.3
+      - name: Set up MSVC
+        uses: ilammy/msvc-dev-cmd@v1.13.0
         with:
-          path: |
-            _build/x64
-            _build/x86
+          arch: ${{ matrix.arch }}
+          spectre: true
 
-          key: ${{ runner.os }}-cmake-${{ hashFiles('${{ env.UE3_BUILD_DIR }}/build.ps1', '**/CMakeLists.txt', 'build/cmake/**' ) }}
-          fail-on-cache-miss: true
+      - name: Generate project
+        working-directory: ${{ env.UE3_BUILD_DIR }}
 
-      #- name: Setup CMake projects
-      #  if: steps.cache-cmake.outputs.cache-hit != 'true'
-      #  shell: pwsh
-      #  working-directory: ${{ env.UE3_BUILD_DIR }}
-      #  run: ./build.ps1 -CI -BuildWin32:$false # Win32 builds are disabled for now
+        # Our builds scripts specify the arch, we don't do that with ninja. the MSVC setup has done it for us
+        run: ./ci_generate.ps1 -OutputDir "${{ env.UE3_COMPILE_DIR }}" -BuildType "${{ matrix.config }}"
 
-      - name: Build Win64 - Debug
-        working-directory: ${{ env.UE3_BUILD_DIR }}/x64
-        run: cmake --build . --config Debug
+      - name: Build project
+        working-directory: ${{ env.UE3_COMPILE_DIR }}
+        run: cmake --build . --config ${{ matrix.config }}
 

@@ -13,19 +13,12 @@ param
 #$DebugPreference = "SilentlyContinue"
 $DebugPreference = "Continue"
 
+$Root = $PSScriptRoot
 $CMakeGenerator = 'Visual Studio 17 2022'
-$CMakeOptions = @(
-    "wxBUILD_COMPATIBILITY='2.8'",
-    "wxBUILD_SHARED=ON",
-    "wxUSE_EXCEPTIONS=OFF",
-    "wxUSE_ON_FATAL_EXCEPTION=OFF",
-    "wxUSE_STACKWALKER=OFF",
-    "wxUSE_EXTENDED_RTTI=OFF",
-    "wxUSE_CRASHREPORT=OFF"
 
-)
-$JoinedOptions = $CMakeOptions -join ' -D'
-
+$OptionsFile = "$Root\build_options.txt"
+$OptionsFileContent = Get-Content -Path $OptionsFile
+$JoinedOptions = $OptionsFileContent -join ' '
 
 # If we have CI enabled, configure only is implied
 if ($CI)
@@ -34,7 +27,7 @@ if ($CI)
 }
 
 Write-Debug "Compiling with the following options:"
-foreach ($Option in $CMakeOptions)
+foreach ($Option in $OptionsFileContent)
 {
     Write-Debug "$Option"
 }
@@ -43,7 +36,6 @@ foreach ($Option in $CMakeOptions)
 ##   Variables   ##
 ###################
 
-$Root = $PSScriptRoot
 $Win64Root = "$Root\x64"
 $Win32Root = "$Root\x86"
 
@@ -59,13 +51,13 @@ Write-Output "Generating Projects"
 if ($BuildWin64)
 {
     Write-Output "Generating Win64"
-    Invoke-Expression "cmake .. -B x64 -Wno-deprecated -G '$CMakeGenerator' -A x64 -D$JoinedOptions"
+    Invoke-Expression "cmake .. -B x64 -Wno-deprecated -G '$CMakeGenerator' -A x64 $JoinedOptions"
 }
 
 if ($BuildWin32)
 {
     Write-Output "Generating Win32"
-    Invoke-Expression "cmake .. -B x86 -Wno-deprecated -G '$CMakeGenerator' -A Win32 -D$JoinedOptions"
+    Invoke-Expression "cmake .. -B x86 -Wno-deprecated -G '$CMakeGenerator' -A Win32 $JoinedOptions"
 }
 
 if ($ConfigureOnly)
