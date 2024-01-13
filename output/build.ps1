@@ -19,7 +19,8 @@ $CMakeOptions = @(
 $JoinedOptions = $CMakeOptions -join ' -D'
 
 Write-Debug "Compiling with the following options:"
-foreach ($Option in $CMakeOptions) {
+foreach ($Option in $CMakeOptions)
+{
     Write-Debug "$Option"
 }
 

@@ -30,12 +30,13 @@ function SetOutDir
 
 
     #Set-Variable -Name "OutputDir" -Value "$Root\Out\$SubDir"
-    $script:OutputPath = "$Root\Out\$SubDir"
+    $script:OutputPath = "$Root\out\$SubDir"
     $script:Win64DllOut = "$OutputPath\Binaries\Win64"
     $script:Win32DllOut = "$OutputPath\Binaries\Win32"
 }
 
-function CopyDirectory {
+function CopyDirectory
+{
     param
     (
         [string]$InDir,
