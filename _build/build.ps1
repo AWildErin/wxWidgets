@@ -4,7 +4,6 @@
 param
 (
     [switch]$ConfigureOnly = $false,
-    [switch]$CI = $false,
     [switch]$BuildWin32 = $true,
     [switch]$BuildWin64 = $true
 )
@@ -19,12 +18,6 @@ $CMakeGenerator = 'Visual Studio 17 2022'
 $OptionsFile = "$Root\build_options.txt"
 $OptionsFileContent = Get-Content -Path $OptionsFile
 $JoinedOptions = $OptionsFileContent -join ' '
-
-# If we have CI enabled, configure only is implied
-if ($CI)
-{
-    $ConfigureOnly = $true
-}
 
 Write-Debug "Compiling with the following options:"
 foreach ($Option in $OptionsFileContent)
@@ -44,8 +37,8 @@ Write-Output "Generating Projects"
 
 # If you add/remove options, be sure to comment this out so the last compile gets removed
 # else the new options may not propagate for the compile due to CMakeCache
-#Remove-Item -path $Win64Root -Recurse -Force
 #Remove-Item -path $Win32Root -Recurse -Force
+#Remove-Item -path $Win64Root -Recurse -Force
 
 # We surpress the deprecated warning, yes we know, but we don't care right now!
 if ($BuildWin64)
@@ -62,7 +55,7 @@ if ($BuildWin32)
 
 if ($ConfigureOnly)
 {
-    Write-Output "-ConfigureOnly or -CI detected, exiting the script."
+    Write-Output "-ConfigureOnly, exiting the script."
     exit
 }
 
