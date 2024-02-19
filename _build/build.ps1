@@ -1,5 +1,8 @@
 # build.ps1
 # Scaffolds and compiles wxWidgets to our requirements
+#
+# To build without Win32, run this: ./build.ps1 -BuildWin32:$false
+#
 
 param
 (
@@ -18,6 +21,9 @@ $CMakeGenerator = 'Visual Studio 17 2022'
 $OptionsFile = "$Root\build_options.txt"
 $OptionsFileContent = Get-Content -Path $OptionsFile
 $JoinedOptions = $OptionsFileContent -join ' '
+
+Write-Debug "Building Win64 $BuildWin64"
+Write-Debug "Building Win32 $BuildWin32"
 
 Write-Debug "Compiling with the following options:"
 foreach ($Option in $OptionsFileContent)
