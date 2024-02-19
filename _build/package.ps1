@@ -92,13 +92,13 @@ function CopyGlob
 ##   Script Main   ##
 #####################
 
-if (-not (Test-Path -Path $Win64Lib))
+if ($BuildWin64 -and -not (Test-Path -Path $Win64Lib))
 {
     Write-Error "$Win64Lib could not be found! Make sure it exists and you compiled both debug and release!"
     Return
 }
 
-if (-not (Test-Path -Path $Win32Lib))
+if ($BuildWin32 -and -not (Test-Path -Path $Win32Lib))
 {
     Write-Error "$Win32Lib could not be found! Make sure it exists and you compiled both debug and release!"
     Return
@@ -112,7 +112,7 @@ if (Test-Path -Path $OutputPath)
 
 # Package up only the stuff we need to ship to the end user
 Write-Output "Preparing Release"
-SetOutDir -SubDir "Rel"
+SetOutDir -SubDir "release"
 
 if ($BuildWin64)
 {
@@ -128,7 +128,7 @@ if ($BuildWin32)
 
 # Package up the dev requirements
 Write-Output "Preparing Developer"
-SetOutDir -SubDir "Dev"
+SetOutDir -SubDir "debug"
 
 $InIncDir = "$Root\..\include"
 $ExtFolder = "$OutputPath\Development\External\wxWidgets"
