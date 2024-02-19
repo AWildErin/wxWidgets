@@ -1,6 +1,9 @@
 param
 (
+    [Parameter(Mandatory=$true)]
     [string]$OutputDir,
+
+    [Parameter(Mandatory=$true)]
     [string]$BuildType
 )
 

@@ -42,5 +42,22 @@ function CopyGlob
         Write-Debug "Copying $($File.Name)"
         Copy-Item -Path $File.FullName -Destination $OutDir -Force
     }
+}
 
+# Converts various arch types to more friendly ones
+# Example: x64 -> Win64.
+# We have this because cmake uses x64 for targeting win64, but UE3 wants
+# all x64 binaries to be in Win64 instead.
+function ConvertArchType
+{
+    param
+    (
+        [Parameter(Mandatory=$true)]
+        [string] $CurrentArch
+    )
+
+    switch ($CurrentArch) {
+        "x64" { return "Win64" }
+        Default { return $CurrentArch }
+    }
 }
